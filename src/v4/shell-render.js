@@ -56,7 +56,8 @@ export const NAV = [
         ]
       },
       { key: 'calendar', href: 'calendar.html', text: 'Calendar', icon: 'calendar' },
-      { key: 'map',      href: 'map.html',      text: 'Map',      icon: 'map' }
+      { key: 'map',      href: 'map.html',      text: 'Map',      icon: 'map' },
+      { key: 'decision-tree', href: 'decision-tree.html', text: 'Decision Tree', icon: 'charts' }
     ]
   },
   {

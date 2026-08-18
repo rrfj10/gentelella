@@ -38,6 +38,9 @@ if (document.querySelector('.settings-content')) {
 if (document.querySelector('[data-date-range], [data-rich-text], [data-multi-select]')) {
   import('./v4/form-controls.js').then((m) => m.initFormControls());
 }
+if (document.getElementById('decomp-tree-root')) {
+  import('./v4/decision-tree.js').then((m) => m.initDecisionTree());
+}
 
 // ────────────────────────
 //  Delegated interactions
