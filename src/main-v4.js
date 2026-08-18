@@ -9,6 +9,19 @@ import { openMenu, DEFAULT_CARD_MENU } from './v4/menus.js';
 import { initCommandPalette } from './v4/command-palette.js';
 import { initPageActions } from './v4/page-actions.js';
 
+// tokens.scss opts every same-origin navigation into the browser's native
+// cross-document View Transition (`@view-transition { navigation: auto; }`).
+// When a transition is superseded — e.g. the user clicks a second link
+// before the first page finishes transitioning in — the browser aborts it
+// and rejects with AbortError. That's expected per spec, not a bug, but
+// left unhandled it surfaces as console noise (and Vite's dev client
+// echoes it). Swallow only that specific, known-benign rejection.
+window.addEventListener('unhandledrejection', (e) => {
+  if (e.reason?.name === 'AbortError' && /transition/i.test(e.reason?.message || '')) {
+    e.preventDefault();
+  }
+});
+
 mountShell();
 initCharts();
 initTables();

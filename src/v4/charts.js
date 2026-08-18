@@ -619,6 +619,125 @@ function funnel(echarts, el, t) {
 }
 
 // ────────────────────────
+//  Waterfall — cash-flow / bridge chart
+// ────────────────────────
+// Classic ECharts waterfall recipe: an invisible "base" bar stacks under a
+// visible "delta" bar so each column floats at the right height. `isTotal`
+// entries (opening/closing balance) render as a full bar from zero in a
+// neutral tone instead of green/red.
+function waterfall(echarts, el, t) {
+  const items = [
+    { name: 'Saldo inicial', value: 1800, isTotal: true },
+    { name: 'Serviços', value: 500 },
+    { name: 'Produtos', value: 360 },
+    { name: 'Despesas', value: -200 },
+    { name: 'Custo fixo', value: -380 },
+    { name: 'Saldo Final', value: null, isTotal: true }
+  ];
+
+  const neutral = '#4b5563';
+  const base = [];
+  const pos = [];
+  const neg = [];
+  const total = [];
+  let running = 0;
+
+  items.forEach((item) => {
+    if (item.isTotal) {
+      const v = item.value ?? running;
+      base.push(0); pos.push(0); neg.push(0); total.push(v);
+      running = v;
+    } else if (item.value >= 0) {
+      base.push(running); pos.push(item.value); neg.push(0); total.push(0);
+      running += item.value;
+    } else {
+      base.push(running + item.value); pos.push(0); neg.push(-item.value); total.push(0);
+      running += item.value;
+    }
+  });
+
+  // Thin connector between the top of one bar and the base of the next,
+  // drawn between the bars' inner edges (category index ± half the gap).
+  const connectors = [];
+  let runningEdge = 0;
+  items.forEach((item, i) => {
+    runningEdge = item.isTotal ? (item.value ?? runningEdge) : runningEdge + item.value;
+    if (i < items.length - 1) {
+      connectors.push([
+        { coord: [i + 0.28, runningEdge] },
+        { coord: [i + 1 - 0.28, runningEdge] }
+      ]);
+    }
+  });
+
+  const fmt = (n) => n.toLocaleString('pt-BR');
+  const labelTop = { show: true, position: 'top', color: t.text, fontSize: 11, fontFamily, fontWeight: 600 };
+
+  const chart = echarts.init(el);
+  chart.setOption({
+    ...baseOption(t),
+    grid: { ...baseOption(t).grid, left: 40, top: 32 },
+    tooltip: {
+      ...baseOption(t).tooltip,
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: (params) => {
+        const p = params.find((x) => x.value !== 0 && x.value !== null && x.value !== undefined);
+        return p ? `${p.axisValueLabel}: ${fmt(p.value)}` : '';
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: items.map((it) => it.name),
+      axisLine: { lineStyle: { color: t.borderLight } },
+      axisTick: { show: false },
+      axisLabel: { color: t.textMuted, fontSize: 10 }
+    },
+    yAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: t.borderLight, type: [4, 3] } },
+      axisLabel: { color: t.textMuted, fontSize: 10, formatter: (v) => fmt(v) },
+      axisLine: { show: false },
+      axisTick: { show: false }
+    },
+    series: [
+      {
+        type: 'bar', stack: 'wf', silent: true, barWidth: '55%',
+        itemStyle: { color: 'transparent' },
+        data: base
+      },
+      {
+        type: 'bar', stack: 'wf', barWidth: '55%', name: 'Aumento',
+        itemStyle: { color: t.green, borderRadius: [3, 3, 3, 3] },
+        label: { ...labelTop, formatter: (p) => (p.value ? `${fmt(p.value)}` : '') },
+        data: pos
+      },
+      {
+        type: 'bar', stack: 'wf', barWidth: '55%', name: 'Redução',
+        itemStyle: { color: t.red, borderRadius: [3, 3, 3, 3] },
+        label: { ...labelTop, formatter: (p) => (p.value ? `-${fmt(p.value)}` : '') },
+        data: neg
+      },
+      {
+        type: 'bar', stack: 'wf', barWidth: '55%', name: 'Saldo',
+        itemStyle: { color: neutral, borderRadius: [3, 3, 3, 3] },
+        label: { ...labelTop, formatter: (p) => (p.value ? `${fmt(p.value)}` : '') },
+        data: total,
+        markLine: {
+          symbol: 'none',
+          silent: true,
+          animation: false,
+          label: { show: false },
+          lineStyle: { color: t.textMuted, width: 1.5, type: 'solid' },
+          data: connectors
+        }
+      }
+    ]
+  });
+  return chart;
+}
+
+// ────────────────────────
 //  Candlestick — OHLC market data
 // ────────────────────────
 function candlestick(echarts, el, t) {
@@ -885,6 +1004,7 @@ const charts = {
   'heatmap':           heatmap,
   'funnel':            funnel,
   'candlestick':       candlestick,
+  'waterfall':         waterfall,
   'treemap':           treemap,
   'sankey':            sankey,
   'calendar-heatmap':  calendarHeatmap,
@@ -925,7 +1045,8 @@ export async function initCharts() {
     },
     {
       GridComponent, TooltipComponent, LegendComponent,
-      VisualMapComponent, PolarComponent, CalendarComponent
+      VisualMapComponent, PolarComponent, CalendarComponent,
+      MarkLineComponent
     },
     { CanvasRenderer }
   ] = await Promise.all([
@@ -941,6 +1062,7 @@ export async function initCharts() {
     TreemapChart, SankeyChart, CustomChart,
     GridComponent, TooltipComponent, LegendComponent,
     VisualMapComponent, PolarComponent, CalendarComponent,
+    MarkLineComponent,
     CanvasRenderer
   ]);
 
